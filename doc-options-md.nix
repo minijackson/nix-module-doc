@@ -7,8 +7,12 @@ with lib;
 let
   visibleOptionDocs = filter (opt: opt.visible && !opt.internal) (optionAttrSetToDocList options);
 
+  isLiteral = value:
+    value ? _type &&
+    (value._type == "literalExpression" || value._type == "literalExample");
+
   toValue = value:
-    if value ? _type && value._type == "literalExpression" then value.text
+    if isLiteral value then value.text
     else generators.toPretty { } value;
 
   toMarkdown = option:
