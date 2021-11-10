@@ -17,6 +17,24 @@ in
         '';
         internal = optionsInternal;
       };
+
+      preBuild = mkOption {
+        type = types.lines;
+        description = ''
+          Extra commands executed before running `mdbook build`.
+        '';
+        default = "";
+        internal = optionsInternal;
+      };
+
+      postBuild = mkOption {
+        type = types.lines;
+        description = ''
+          Extra commands executed after running `mdbook build`.
+        '';
+        default = "";
+        internal = optionsInternal;
+      };
     };
   };
 
@@ -37,7 +55,11 @@ in
 
       cp "${getAttrFromPath (outputAttrPath ++ ["doc-options-md"]) config}" src/options.md
 
+      ${cfg.preBuild}
+
       mdbook build
+
+      ${cfg.postBuild}
 
       cp -r book "$out"
     '';
