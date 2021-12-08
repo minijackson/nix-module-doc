@@ -5,7 +5,7 @@
 with lib;
 
 let
-  cfg = getAttrFromPath (optionsAttrPath  ++ [ "mdbook" ]) config;
+  cfg = getAttrFromPath (optionsAttrPath ++ [ "mdbook" ]) config;
 in
 {
   options = setAttrByPath optionsAttrPath {
@@ -14,6 +14,54 @@ in
         type = with types; either path package;
         description = ''
           Root directory of mdbook sources to compile.
+        '';
+        internal = optionsInternal;
+      };
+
+      pages = mkOption {
+        type = with types; attrsOf (submodule ({ name, config, ... }: {
+          options = {
+            target = mkOption {
+              type = types.str;
+              default = name;
+              description = ''
+                Where to install the page, relative to the `src/` directory.
+              '';
+              internal = optionsInternal;
+            };
+
+            text = mkOption {
+              type = types.lines;
+              description = ''
+                Content of the page.
+              '';
+              internal = optionsInternal;
+            };
+
+            source = mkOption {
+              type = types.path;
+              description = ''
+                Path of the source file for this page.
+
+                If both `text` and `source` are defined, `source` takes
+                precedence.
+              '';
+              internal = optionsInternal;
+            };
+          };
+
+          config.source = mkDefault (pkgs.writeText name config.text);
+        }));
+        default = { };
+        example = {
+          "my-page.md".text = ''
+            # Title
+
+            hello, world!
+          '';
+        };
+        description = ''
+          Pages to add to the source directory before building.
         '';
         internal = optionsInternal;
       };
@@ -38,30 +86,45 @@ in
     };
   };
 
-  config = setAttrByPath outputAttrPath {
-    # TODO: make pandoc pre-processor
-    mdbook = pkgs.runCommand "mdbook"
-      {
-        src = cfg.src;
-        nativeBuildInputs = with pkgs; [ mdbook ];
-      } ''
-      unpackFile "$src"
-      chmod -R u+w .
-      cd */
+  config = mkMerge [
+    (setAttrByPath (optionsAttrPath ++ [ "mdbook" ]) {
+      pages."options.md".text = ''
+        # Available options
 
-      mkdir theme
-      cp ${pkgs.documentation-highlighter}/highlight.pack.js theme/highlight.js
-      cp ${pkgs.documentation-highlighter}/mono-blue.css theme/highlight.css
+        You can use the following options:
 
-      cp "${getAttrFromPath (outputAttrPath ++ ["doc-options-md"]) config}" src/options.md
 
-      ${cfg.preBuild}
+        ${readFile (getAttrFromPath (outputAttrPath ++ [ "doc-options-md" ]) config)}
+      '';
+    })
 
-      mdbook build
+    (setAttrByPath outputAttrPath {
+      # TODO: make pandoc pre-processor
+      mdbook = pkgs.runCommand "mdbook"
+        {
+          src = cfg.src;
+          nativeBuildInputs = with pkgs; [ mdbook ];
+        } ''
+        unpackFile "$src"
+        chmod -R u+w .
+        cd */
 
-      ${cfg.postBuild}
+        mkdir theme
+        cp ${pkgs.documentation-highlighter}/highlight.pack.js theme/highlight.js
+        cp ${pkgs.documentation-highlighter}/mono-blue.css theme/highlight.css
 
-      cp -r book "$out"
-    '';
-  };
+        ${concatMapStrings (page: ''
+          cp "${page.source}" "src/${page.target}"
+        '') (attrValues cfg.pages)}
+
+        ${cfg.preBuild}
+
+        mdbook build
+
+        ${cfg.postBuild}
+
+        cp -r book "$out"
+      '';
+    })
+  ];
 }
