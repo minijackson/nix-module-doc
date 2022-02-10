@@ -6,6 +6,8 @@ with lib;
 
 let
   cfg = getAttrFromPath (optionsAttrPath ++ [ "mdbook" ]) config;
+
+  documentation-highlighter = pkgs.callPackage ./documentation-highlighter { };
 in
 {
   options = setAttrByPath optionsAttrPath {
@@ -110,8 +112,8 @@ in
         cd */
 
         mkdir theme
-        cp ${pkgs.documentation-highlighter}/highlight.pack.js theme/highlight.js
-        cp ${pkgs.documentation-highlighter}/mono-blue.css theme/highlight.css
+        cp ${documentation-highlighter}/highlight.min.js theme/highlight.js
+        cp ${documentation-highlighter}/mono-blue.min.css theme/highlight.css
 
         ${concatMapStrings (page: ''
           cp "${page.source}" "src/${page.target}"
