@@ -1,55 +1,66 @@
-{ outputAttrPath, optionsAttrPath, optionsInternal ? true, }:
-
-{ lib, options, pkgs, ... }:
-
-with lib;
-
-let
+{
+  outputAttrPath,
+  optionsAttrPath,
+  optionsInternal ? true,
+}: {
+  lib,
+  options,
+  pkgs,
+  ...
+}:
+with lib; let
   visibleOptionDocs = filter (opt: opt.visible && !opt.internal) (optionAttrSetToDocList options);
 
   isLiteral = value:
-    value ? _type &&
-    (value._type == "literalExpression" || value._type == "literalExample");
+    value
+    ? _type
+    && (value._type == "literalExpression"
+      || value._type == "literalExample"
+      || value._type == "literalMD");
 
   toValue = value:
-    if isLiteral value then value.text
-    else generators.toPretty { } value;
+    if isLiteral value
+    then value.text
+    else generators.toPretty {} value;
 
-  toMarkdown = option:
-    ''
-      ## `${option.name}`
+  toText = value:
+    if value ? _type
+    then value.text
+    else value;
 
-      ${option.description}
+  toMarkdown = option: ''
+    ## `${option.name}`
 
-      ${optionalString (option ? default) ''
-        **Default value**:
+    ${toText option.description}
 
-        ```nix
-        ${toValue option.default}
-        ```
-      ''}
+    ${optionalString (option ? default) ''
+      **Default value**:
 
-      **Type**: ${option.type}${optionalString option.readOnly " (read only)"}
+      ```nix
+      ${toValue option.default}
+      ```
+    ''}
 
-      ${optionalString (option ? example) ''
-        **Example**:
+    **Type**: ${option.type}${optionalString option.readOnly " (read only)"}
 
-        ```nix
-        ${toValue option.example}
-        ```
-      ''}
+    ${optionalString (option ? example) ''
+      **Example**:
 
-      Declared in:
+      ```nix
+      ${toValue option.example}
+      ```
+    ''}
 
-      ${concatStringsSep "\n" (map (decl: "- ${decl}") option.declarations)}
+    Declared in:
 
-    '';
+    ${concatStringsSep "\n" (map (decl: "- ${decl}") option.declarations)}
+
+  '';
 
   # TODO: rewrite "Declared in" so that it points to GitHub repository
 
   options-md = concatStringsSep "\n" (map toMarkdown visibleOptionDocs);
-in
-{
+in {
   config = setAttrByPath outputAttrPath {
     doc-options-md = pkgs.writeText "options.md" options-md;
   };
