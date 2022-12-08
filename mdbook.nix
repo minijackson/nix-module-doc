@@ -1,15 +1,18 @@
-{ outputAttrPath, optionsAttrPath, optionsInternal ? true, }:
-
-{ config, lib, pkgs, ... }:
-
-with lib;
-
-let
-  cfg = getAttrFromPath (optionsAttrPath ++ [ "mdbook" ]) config;
-
-  documentation-highlighter = pkgs.callPackage ./documentation-highlighter { };
-in
 {
+  outputAttrPath,
+  optionsAttrPath,
+  optionsInternal ? true,
+}: {
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+with lib; let
+  cfg = getAttrFromPath (optionsAttrPath ++ ["mdbook"]) config;
+
+  documentation-highlighter = pkgs.callPackage ./documentation-highlighter {};
+in {
   options = setAttrByPath optionsAttrPath {
     mdbook = {
       src = mkOption {
@@ -21,40 +24,45 @@ in
       };
 
       pages = mkOption {
-        type = with types; attrsOf (submodule ({ name, config, ... }: {
-          options = {
-            target = mkOption {
-              type = types.str;
-              default = name;
-              description = ''
-                Where to install the page, relative to the `src/` directory.
-              '';
-              internal = optionsInternal;
+        type = with types;
+          attrsOf (submodule ({
+            name,
+            config,
+            ...
+          }: {
+            options = {
+              target = mkOption {
+                type = types.str;
+                default = name;
+                description = ''
+                  Where to install the page, relative to the `src/` directory.
+                '';
+                internal = optionsInternal;
+              };
+
+              text = mkOption {
+                type = types.lines;
+                description = ''
+                  Content of the page.
+                '';
+                internal = optionsInternal;
+              };
+
+              source = mkOption {
+                type = types.path;
+                description = ''
+                  Path of the source file for this page.
+
+                  If both `text` and `source` are defined, `source` takes
+                  precedence.
+                '';
+                internal = optionsInternal;
+              };
             };
 
-            text = mkOption {
-              type = types.lines;
-              description = ''
-                Content of the page.
-              '';
-              internal = optionsInternal;
-            };
-
-            source = mkOption {
-              type = types.path;
-              description = ''
-                Path of the source file for this page.
-
-                If both `text` and `source` are defined, `source` takes
-                precedence.
-              '';
-              internal = optionsInternal;
-            };
-          };
-
-          config.source = mkDefault (pkgs.writeText name config.text);
-        }));
-        default = { };
+            config.source = mkDefault (pkgs.writeText name config.text);
+          }));
+        default = {};
         example = {
           "my-page.md".text = ''
             # Title
@@ -89,44 +97,45 @@ in
   };
 
   config = mkMerge [
-    (setAttrByPath (optionsAttrPath ++ [ "mdbook" ]) {
+    (setAttrByPath (optionsAttrPath ++ ["mdbook"]) {
       pages."options.md".text = ''
         # Available options
 
         You can use the following options:
 
 
-        ${readFile (getAttrFromPath (outputAttrPath ++ [ "doc-options-md" ]) config)}
+        ${readFile (getAttrFromPath (outputAttrPath ++ ["doc-options-md"]) config)}
       '';
     })
 
     (setAttrByPath outputAttrPath {
       # TODO: make pandoc pre-processor
-      mdbook = pkgs.runCommand "mdbook"
+      mdbook =
+        pkgs.runCommand "mdbook"
         {
           src = cfg.src;
-          nativeBuildInputs = with pkgs; [ mdbook ];
+          nativeBuildInputs = with pkgs; [mdbook];
         } ''
-        unpackFile "$src"
-        chmod -R u+w .
-        cd */
+          unpackFile "$src"
+          chmod -R u+w .
+          cd */
 
-        mkdir theme
-        cp ${documentation-highlighter}/highlight.min.js theme/highlight.js
-        cp ${documentation-highlighter}/mono-blue.min.css theme/highlight.css
+          mkdir theme
+          cp ${documentation-highlighter}/highlight.min.js theme/highlight.js
+          cp ${documentation-highlighter}/mono-blue.min.css theme/highlight.css
 
-        ${concatMapStrings (page: ''
-          cp "${page.source}" "src/${page.target}"
-        '') (attrValues cfg.pages)}
+          ${concatMapStrings (page: ''
+            cp "${page.source}" "src/${page.target}"
+          '') (attrValues cfg.pages)}
 
-        ${cfg.preBuild}
+          ${cfg.preBuild}
 
-        mdbook build
+          mdbook build
 
-        ${cfg.postBuild}
+          ${cfg.postBuild}
 
-        cp -r book "$out"
-      '';
+          cp -r book "$out"
+        '';
     })
   ];
 }

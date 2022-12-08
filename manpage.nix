@@ -1,13 +1,16 @@
-{ outputAttrPath, optionsAttrPath, optionsInternal ? true, }:
-
-{ config, lib, pkgs, ... }:
-
-with lib;
-
-let
-  cfg = getAttrFromPath (optionsAttrPath  ++ [ "manpage" ]) config;
-in
 {
+  outputAttrPath,
+  optionsAttrPath,
+  optionsInternal ? true,
+}: {
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+with lib; let
+  cfg = getAttrFromPath (optionsAttrPath ++ ["manpage"]) config;
+in {
   options = setAttrByPath optionsAttrPath {
     manpage = {
       name = mkOption {
@@ -93,12 +96,12 @@ in
         default = "";
         internal = optionsInternal;
       };
-
     };
   };
 
   config = setAttrByPath outputAttrPath {
-    manpage = pkgs.runCommand cfg.file
+    manpage =
+      pkgs.runCommand cfg.file
       {
         src = pkgs.writeText "${cfg.file}.md" ''
           % ${cfg.title}
@@ -128,9 +131,9 @@ in
           ${cfg.textAfter}
         '';
 
-        nativeBuildInputs = [ pkgs.pandoc ];
+        nativeBuildInputs = [pkgs.pandoc];
       } ''
-      pandoc "$src" --from=markdown --to=man --standalone --output="$out"
-    '';
+        pandoc "$src" --from=markdown --to=man --standalone --output="$out"
+      '';
   };
 }
