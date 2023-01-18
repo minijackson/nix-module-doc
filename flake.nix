@@ -20,7 +20,7 @@
         pkgs.lib.evalModules {
           modules =
             [
-              {config._module.args = {inherit pkgs;};}
+              {config._module.args = {pkgs = pkgs.__splicedPackages;};}
             ]
             ++ modules;
         };
