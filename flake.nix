@@ -1,7 +1,7 @@
 {
   description = "Generate documentation for your own projects using the NixOS module system";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-21.05";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.11";
 
   outputs = {
     self,
