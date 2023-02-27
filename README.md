@@ -27,7 +27,7 @@ In your `flake.nix`
         (inputs.nix-module-doc.lib.modules.manpage docParams)
         (inputs.nix-module-doc.lib.modules.mdbook docParams)
       ];
-    }
+    };
   };
 }
 ```
